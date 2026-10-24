@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#121820">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Zone Meter">
+  <meta name="description" content="Zone-system exposure calculator">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <title>Zone Meter</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --background:#121820;
+      --surface:#1b242d;
+      --control:#222e39;
+      --border:#34414e;
+      --muted:#a3b0bd;
+      --text:#f2f5f7;
+      --selected:rgba(136,173,205,.20);
+      --selected-edge:rgba(155,190,219,.43);
+      --row-height:clamp(37px,5.15svh,44px);
+    }
+    * { box-sizing:border-box; }
+    html { min-height:100%; background:var(--background); }
+    body { margin:0;min-height:100svh;background:var(--background);color:var(--text);
+      font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      font-variant-numeric:tabular-nums;
+      -webkit-font-smoothing:antialiased;
+      overscroll-behavior-y:contain;
+    }
+    button,select {font:inherit;color:inherit}
+    button {cursor:pointer;-webkit-tap-highlight-color:transparent}
+    button:focus-visible,select:focus-visible,.number-cell:focus-visible {
+      outline:2px solid #bddaf2;outline-offset:2px;
+    }
+    .app {width:min(100%,512px);margin-inline:auto;
+      padding:calc(18px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px));
+    }
+    .topbar {height:36px;display:flex;justify-content:space-between;align-items:center;margin-bottom:17px;}
+    h1 {margin:0;font-size:20px;font-weight:680;letter-spacing:-.025em;}
+    .reset {border:0;background:transparent;color:var(--muted);font-size:13px;padding:10px 4px;}
+    .reset:active {color:var(--text)}
+    .controls {display:grid;grid-template-columns:1.04fr 1.1fr 1fr;gap:8px;margin-bottom:19px}
+    .control {min-width:0;}
+    .control-label {display:block;color:var(--muted);font-size:11px;line-height:1.3;letter-spacing:.085em;font-weight:700;margin-bottom:8px;}
+    .select-wrap {position:relative}
+    select {display:block;appearance:none;width:100%;height:46px;
+      border:1px solid var(--border);border-radius:10px;padding:0 25px 0 12px;
+      background:var(--control);font-size:16px;font-weight:630;text-align:left;
+      -webkit-appearance:none;
+    }
+    .select-wrap::after {content:"";position:absolute;right:12px;top:19px;pointer-events:none;
+      width:7px;height:7px;border-right:1.7px solid var(--muted);border-bottom:1.7px solid var(--muted);transform:rotate(45deg);}
+    .stepper {height:46px;display:flex;align-items:center;border:1px solid var(--border);background:var(--control);border-radius:10px;overflow:hidden;}
+    .stepper button {display:grid;place-items:center;flex:0 0 29px;align-self:stretch;padding:0;
+      background:transparent;border:0;font-size:21px;font-weight:350;line-height:1;}
+    .stepper button:active {background:#344350}
+    .stepper button:disabled {opacity:.24;cursor:default}
+    .stepper output {flex:1;min-width:0;text-align:center;font-size:15px;font-weight:650;white-space:nowrap;}
+    .tape-head {display:grid;grid-template-columns:.72fr .94fr 1.57fr;gap:6px;margin:0 0 9px;}
+    .tape-head span {color:var(--muted);font-size:11px;letter-spacing:.105em;font-weight:700;text-align:center;}
+    .zone-grid {display:grid;gap:3px;touch-action:pan-y;}
+    .zone-row {display:grid;grid-template-columns:.72fr .94fr 1.57fr;gap:6px;position:relative;
+      height:var(--row-height);border-radius:7px;isolation:isolate;}
+    .zone-row::before {content:"";position:absolute;inset:0;border-radius:7px;pointer-events:none;z-index:0;}
+    .zone-row.is-meter::before {background:var(--selected);box-shadow:inset 0 0 0 1px var(--selected-edge);}
+    .zone-row.is-five::after {content:"";position:absolute;inset:0;border:2.5px solid var(--text);border-radius:7px;pointer-events:none;z-index:3;}
+    .tape-cell {min-width:0;display:flex;align-items:center;justify-content:center;height:100%;position:relative;z-index:1;
+      font-size:clamp(13px,3.7vw,16px);font-weight:530;letter-spacing:-.005em;border-radius:5px;}
+    .zone-cell {border:0;font-weight:740;font-size:16px;}
+    .number-cell {background:var(--surface);border:0;user-select:none;-webkit-user-select:none;
+      touch-action:none;cursor:ns-resize;}
+    .zone-row.is-meter .number-cell {background:transparent;}
+    .zone-row.is-five .number-cell {font-weight:760;}
+    .zone-cell:active {filter:brightness(1.16);}
+    .number-cell:active {cursor:grabbing;}
+    @media (max-width:360px) {
+      .app{padding-inline:10px}
+      .controls{gap:5px}
+      .stepper button{flex-basis:25px}
+      .stepper output{font-size:13px}
+      select{padding-left:9px;font-size:14px}
+      .tape-head,.zone-row{gap:4px}
+      .tape-cell{font-size:13px}
+    }
+    @media (min-width:600px) {
+      .app {padding-top:38px}
+      .zone-row {height:44px}
+      .tape-cell{font-size:16px}
+    }
+    @media (prefers-reduced-motion:reduce) { *{scroll-behavior:auto!important} }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <h1>Zone meter</h1>
+      <button id="reset" class="reset" type="button">Reset</button>
+    </header>
+    <section class="controls" aria-label="Exposure settings">
+      <div class="control">
+        <label for="meter-shutter" class="control-label">METER</label>
+        <div class="select-wrap"><select id="meter-shutter" aria-label="Metered shutter speed"></select></div>
+      </div>
+      <div class="control">
+        <span class="control-label">APERTURE</span>
+        <div class="stepper">
+          <button id="ap-minus" type="button" aria-label="Decrease aperture">−</button>
+          <output id="ap-value" aria-label="Aperture">f/4</output>
+          <button id="ap-plus" type="button" aria-label="Increase aperture">+</button>
+        </div>
+      </div>
+      <div class="control">
+        <span class="control-label">ISO</span>
+        <div class="stepper">
+          <button id="iso-minus" type="button" aria-label="Decrease ISO">−</button>
+          <output id="iso-value" aria-label="ISO">400</output>
+          <button id="iso-plus" type="button" aria-label="Increase ISO">+</button>
+        </div>
+      </div>
+    </section>
+    <div class="tape-head" aria-hidden="true"><span>ZONE</span><span>EV</span><span>EXPOSURE</span></div>
+    <section id="zone-grid" class="zone-grid" aria-label="Zone system exposure tapes"></section>
+  </main>
+  <script>
+  (() => {
+    'use strict';
+    const names = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
+    const colours = ['#141414','#292929','#3e3e3e','#545454','#6c6c6c','#858585','#9f9f9f','#b9b9b9','#d0d0d0','#e7e7e7','#fafafa'];
+    const apertures = [1,1.4,2,2.8,4,5.6,8,11,16,22,32,45];
+    const isos = [25,50,100,200,400,800,1600,3200,6400,12800,25600];
+    const shutterValues = [30,25,20,15,13,10,8,6,5,4,3.2,2.5,2,1.6,1.3,1,.8,.6,.5,.4,1/3,1/4,1/5,1/6,1/8,1/10,1/13,1/15,1/20,1/25,1/30,1/40,1/50,1/60,1/80,1/100,1/125,1/160,1/200,1/250,1/320,1/400,1/500,1/640,1/800,1/1000,1/1250,1/1600,1/2000,1/2500,1/3200,1/4000,1/5000,1/6400,1/8000,1/10000,1/12800,1/16000];
+    const $ = id => document.getElementById(id);
+    const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
+    const defaultState = () => ({apIndex:4,isoIndex:4,placedZone:3,sceneEV:Math.log2(16*30)-2});
+    function loadState(){
+      try{
+        const saved=JSON.parse(localStorage.getItem('zone-meter-state-v1'));
+        if(!saved||!Number.isInteger(saved.apIndex)||!Number.isInteger(saved.isoIndex)||!Number.isInteger(saved.placedZone)||!Number.isFinite(saved.sceneEV))return defaultState();
+        if(saved.apIndex<0||saved.apIndex>=apertures.length||saved.isoIndex<0||saved.isoIndex>=isos.length||saved.placedZone<0||saved.placedZone>10||saved.sceneEV < -25||saved.sceneEV > 40)return defaultState();
+        return saved;
+      }catch{return defaultState()}
+    }
+    let state=loadState();
+    const meterSelect=$('meter-shutter');
+    const grid=$('zone-grid');
+    const rows=[];
+    function formatShutter(t){
+      if(t>=1)return `${Number(t.toFixed(1))}s`;
+      return `1/${Math.round(1/t)}`;
+    }
+    function nearestShutter(t){
+      let best=shutterValues[0],dist=Infinity;
+      for(const candidate of shutterValues){
+        const d=Math.abs(Math.log2(candidate/t));
+        if(d<dist){best=candidate;dist=d}
+      }
+      return best;
+    }
+    function save(){try{localStorage.setItem('zone-meter-state-v1',JSON.stringify(state))}catch{}}
+    function meteredEV(){return state.sceneEV+Math.log2(isos[state.isoIndex]/100)}
+    function createRows(){
+      for(let i=0;i<names.length;i++){
+        const row=document.createElement('div');row.className='zone-row';row.dataset.zone=String(i);
+        const zone=document.createElement('button');zone.type='button';zone.className='tape-cell zone-cell';zone.textContent=names[i];zone.style.backgroundColor=colours[i];zone.style.color=i<5?'#fff':'#111820';zone.setAttribute('aria-label',`Place meter reading in zone ${names[i]}`);
+        const ev=document.createElement('div');ev.className='tape-cell number-cell ev-cell';ev.tabIndex=0;ev.setAttribute('role','slider');ev.setAttribute('aria-label',`EV tape, zone ${names[i]}`);ev.setAttribute('aria-valuemin','0');ev.setAttribute('aria-valuemax','10');
+        const exposure=document.createElement('div');exposure.className='tape-cell number-cell exposure-cell';exposure.tabIndex=0;exposure.setAttribute('role','slider');exposure.setAttribute('aria-label',`Exposure tape, zone ${names[i]}`);exposure.setAttribute('aria-valuemin','0');exposure.setAttribute('aria-valuemax','10');
+        row.append(zone,ev,exposure);grid.append(row);
+        zone.addEventListener('click',()=>placeAt(i));
+        rows.push({row,zone,ev,exposure});
+      }
+    }
+    function render(){
+      const ap=apertures[state.apIndex],iso=isos[state.isoIndex],meterEV=meteredEV();
+      $('ap-value').textContent=`f/${ap}`;
+      $('iso-value').textContent=String(iso);
+      $('ap-minus').disabled=state.apIndex===0;
+      $('ap-plus').disabled=state.apIndex===apertures.length-1;
+      $('iso-minus').disabled=state.isoIndex===0;
+      $('iso-plus').disabled=state.isoIndex===isos.length-1;
+      const measuredShutter=ap*ap/Math.pow(2,meterEV);
+      const nearest=nearestShutter(measuredShutter);
+      meterSelect.value=String(nearest);
+      for(let i=0;i<rows.length;i++){
+        const {row,ev,exposure,zone}=rows[i];
+        const rowEV=meterEV+i-state.placedZone;
+        const t=ap*ap/Math.pow(2,rowEV);
+        ev.textContent=rowEV.toFixed(1);
+        exposure.textContent=`${t>30||t<1/16000?'—':formatShutter(nearestShutter(t))}  -  f/${ap}`;
+        row.classList.toggle('is-meter',i===state.placedZone);
+        row.classList.toggle('is-five',i===5);
+        zone.setAttribute('aria-pressed',String(i===state.placedZone));
+        for(const tape of [ev,exposure]){
+          tape.setAttribute('aria-valuenow',String(state.placedZone));
+          tape.setAttribute('aria-valuetext',`Metered placement zone ${names[state.placedZone]}`);
+        }
+      }
+      save();
+    }
+    function placeAt(index){
+      const next=clamp(index,0,10);
+      if(next===state.placedZone)return;
+      state.placedZone=next;
+      render();
+      if(navigator.vibrate)navigator.vibrate(6);
+    }
+    function apStep(delta){state.apIndex=clamp(state.apIndex+delta,0,apertures.length-1);render()}
+    function isoStep(delta){state.isoIndex=clamp(state.isoIndex+delta,0,isos.length-1);render()}
+    for(const s of shutterValues){
+      const opt=document.createElement('option');opt.value=String(s);opt.textContent=formatShutter(s);meterSelect.add(opt);
+    }
+    meterSelect.addEventListener('change',()=>{
+      const t=Number(meterSelect.value),ap=apertures[state.apIndex],iso=isos[state.isoIndex];
+      if(!(t>0))return;
+      state.sceneEV=Math.log2(ap*ap/t)-Math.log2(iso/100);
+      render();
+    });
+    $('ap-minus').addEventListener('click',()=>apStep(-1));
+    $('ap-plus').addEventListener('click',()=>apStep(1));
+    $('iso-minus').addEventListener('click',()=>isoStep(-1));
+    $('iso-plus').addEventListener('click',()=>isoStep(1));
+    $('reset').addEventListener('click',()=>{state=defaultState();render()});
+    let drag=null;
+    grid.addEventListener('pointerdown',e=>{
+      if(e.pointerType==='mouse'&&e.button!==0)return;
+      if(!e.target.closest('.number-cell'))return;
+      drag={id:e.pointerId,startY:e.clientY,startZone:state.placedZone};
+      grid.setPointerCapture(e.pointerId);
+    });
+    grid.addEventListener('pointermove',e=>{
+      if(!drag||e.pointerId!==drag.id)return;
+      const height=rows[0].row.getBoundingClientRect().height+3;
+      const steps=Math.round((e.clientY-drag.startY)/height);
+      placeAt(drag.startZone+steps);
+    });
+    function clearDrag(e){if(drag&&e.pointerId===drag.id)drag=null}
+    grid.addEventListener('pointerup',clearDrag);
+    grid.addEventListener('pointercancel',clearDrag);
+    grid.addEventListener('lostpointercapture',()=>{drag=null});
+    let wheelAccumulator=0;
+    grid.addEventListener('wheel',e=>{
+      if(!e.target.closest('.number-cell'))return;
+      e.preventDefault();
+      wheelAccumulator+=e.deltaY;
+      const steps=Math.trunc(wheelAccumulator/42);
+      if(steps){wheelAccumulator-=steps*42;placeAt(state.placedZone+steps)}
+    },{passive:false});
+    grid.addEventListener('keydown',e=>{
+      if(!e.target.closest('.number-cell'))return;
+      if(e.key==='ArrowUp'||e.key==='ArrowDown'||e.key==='PageUp'||e.key==='PageDown'){
+        e.preventDefault();placeAt(state.placedZone+(e.key==='ArrowUp'||e.key==='PageUp'?-1:1));
+      }
+    });
+    createRows();render();
+    if('serviceWorker' in navigator && (location.protocol==='https:'||location.hostname==='localhost')){
+      window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+    }
+  })();
+  </script>
+</body>
+</html>
