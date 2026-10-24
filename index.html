@@ -59,12 +59,6 @@
     }
     .select-wrap::after {content:"";position:absolute;right:12px;top:19px;pointer-events:none;
       width:7px;height:7px;border-right:1.7px solid var(--muted);border-bottom:1.7px solid var(--muted);transform:rotate(45deg);}
-    .stepper {height:46px;display:flex;align-items:center;border:1px solid var(--border);background:var(--control);border-radius:10px;overflow:hidden;}
-    .stepper button {display:grid;place-items:center;flex:0 0 29px;align-self:stretch;padding:0;
-      background:transparent;border:0;font-size:21px;font-weight:350;line-height:1;}
-    .stepper button:active {background:#344350}
-    .stepper button:disabled {opacity:.24;cursor:default}
-    .stepper output {flex:1;min-width:0;text-align:center;font-size:15px;font-weight:650;white-space:nowrap;}
     .tape-head {display:grid;flex-shrink:0;grid-template-columns:.72fr .94fr 1.57fr;gap:6px;margin:0 0 9px;}
     .tape-head span {color:var(--muted);font-size:11px;letter-spacing:.105em;font-weight:700;text-align:center;}
     .zone-grid {display:grid;flex:1 1 auto;min-height:0;max-height:514px;
@@ -89,7 +83,7 @@
       .topbar {height:30px;margin-bottom:9px;}
       .controls {margin-bottom:12px;}
       .control-label {margin-bottom:4px;}
-      select,.stepper {height:40px;}
+      select {height:40px;}
       .select-wrap::after {top:16px;}
       .tape-head {margin-bottom:5px;}
       .zone-grid {gap:2px;}
@@ -97,8 +91,6 @@
     @media (max-width:360px) {
       .app{padding-inline:10px}
       .controls{gap:5px}
-      .stepper button{flex-basis:25px}
-      .stepper output{font-size:13px}
       select{padding-left:9px;font-size:14px}
       .tape-head,.zone-row{gap:4px}
       .tape-cell{font-size:13px}
@@ -123,20 +115,12 @@
         <div class="select-wrap"><select id="meter-shutter" aria-label="Metered shutter speed"></select></div>
       </div>
       <div class="control">
-        <span class="control-label">APERTURE</span>
-        <div class="stepper">
-          <button id="ap-minus" type="button" aria-label="Decrease aperture">−</button>
-          <output id="ap-value" aria-label="Aperture">f/4</output>
-          <button id="ap-plus" type="button" aria-label="Increase aperture">+</button>
-        </div>
+        <label for="ap-select" class="control-label">APERTURE</label>
+        <div class="select-wrap"><select id="ap-select" aria-label="Aperture"></select></div>
       </div>
       <div class="control">
-        <span class="control-label">ISO</span>
-        <div class="stepper">
-          <button id="iso-minus" type="button" aria-label="Decrease ISO">−</button>
-          <output id="iso-value" aria-label="ISO">400</output>
-          <button id="iso-plus" type="button" aria-label="Increase ISO">+</button>
-        </div>
+        <label for="iso-select" class="control-label">ISO</label>
+        <div class="select-wrap"><select id="iso-select" aria-label="ISO"></select></div>
       </div>
     </section>
     <div class="tape-head" aria-hidden="true"><span>ZONE</span><span>EV</span><span>EXPOSURE</span></div>
@@ -170,6 +154,8 @@
     }
     let state=loadState();
     const meterSelect=$('meter-shutter');
+    const apertureSelect=$('ap-select');
+    const isoSelect=$('iso-select');
     const grid=$('zone-grid');
     const rows=[];
     function formatShutter(t){
@@ -199,12 +185,8 @@
     }
     function render(){
       const ap=apertures[state.apIndex],iso=isos[state.isoIndex],meterEV=meteredEV();
-      $('ap-value').textContent=`f/${ap}`;
-      $('iso-value').textContent=String(iso);
-      $('ap-minus').disabled=state.apIndex===0;
-      $('ap-plus').disabled=state.apIndex===apertures.length-1;
-      $('iso-minus').disabled=state.isoIndex===0;
-      $('iso-plus').disabled=state.isoIndex===isos.length-1;
+      apertureSelect.value=String(state.apIndex);
+      isoSelect.value=String(state.isoIndex);
       const measuredShutter=ap*ap/Math.pow(2,meterEV);
       const nearest=nearestShutter(measuredShutter);
       meterSelect.value=String(nearest);
@@ -231,8 +213,18 @@
       render();
       if(navigator.vibrate)navigator.vibrate(6);
     }
-    function apStep(delta){state.apIndex=clamp(state.apIndex+delta,0,apertures.length-1);render()}
-    function isoStep(delta){state.isoIndex=clamp(state.isoIndex+delta,0,isos.length-1);render()}
+    apertures.forEach((ap,i)=>{
+      const opt=document.createElement('option');
+      opt.value=String(i);
+      opt.textContent=`f/${ap}`;
+      apertureSelect.add(opt);
+    });
+    isos.forEach((iso,i)=>{
+      const opt=document.createElement('option');
+      opt.value=String(i);
+      opt.textContent=String(iso);
+      isoSelect.add(opt);
+    });
     for(const s of shutterValues){
       const opt=document.createElement('option');opt.value=String(s);opt.textContent=formatShutter(s);meterSelect.add(opt);
     }
@@ -242,10 +234,14 @@
       state.sceneEV=Math.log2(ap*ap/t)-Math.log2(iso/100);
       render();
     });
-    $('ap-minus').addEventListener('click',()=>apStep(-1));
-    $('ap-plus').addEventListener('click',()=>apStep(1));
-    $('iso-minus').addEventListener('click',()=>isoStep(-1));
-    $('iso-plus').addEventListener('click',()=>isoStep(1));
+    apertureSelect.addEventListener('change',()=>{
+      state.apIndex=Number(apertureSelect.value);
+      render();
+    });
+    isoSelect.addEventListener('change',()=>{
+      state.isoIndex=Number(isoSelect.value);
+      render();
+    });
     $('reset').addEventListener('click',()=>{state=defaultState();render()});
     let drag=null;
     grid.addEventListener('pointerdown',e=>{
