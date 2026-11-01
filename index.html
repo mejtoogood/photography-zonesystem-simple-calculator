@@ -44,11 +44,15 @@
       display:flex;flex-direction:column;overflow:hidden;
       padding:calc(18px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px));
     }
-    .topbar {height:36px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;margin-bottom:17px;}
+    .topbar {height:36px;flex-shrink:0;display:flex;justify-content:space-between;align-items:center;margin-bottom:17px;gap:8px;}
+    .header-actions {display:flex;align-items:center;gap:5px;flex-shrink:0;}
+    .header-action {background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;font-size:12px;font-weight:600;padding:8px 9px;min-height:35px;}
+    .header-action:active {background:var(--control);color:var(--text);}
+    .reset {border-color:transparent;}
+
     h1 {margin:0;font-size:20px;font-weight:680;letter-spacing:-.025em;}
-    .reset {border:0;background:transparent;color:var(--muted);font-size:13px;padding:10px 4px;}
     .reset:active {color:var(--text)}
-    .controls {display:grid;flex-shrink:0;grid-template-columns:1.04fr 1.1fr 1fr;gap:8px;margin-bottom:19px}
+    .controls {display:grid;flex-shrink:0;grid-template-columns:1.05fr 1.1fr .9fr .55fr;gap:7px;margin-bottom:19px}
     .control {min-width:0;}
     .control-label {display:block;color:var(--muted);font-size:11px;line-height:1.3;letter-spacing:.085em;font-weight:700;margin-bottom:8px;}
     .select-wrap {position:relative}
@@ -57,8 +61,33 @@
       background:var(--control);font-size:16px;font-weight:630;text-align:left;
       -webkit-appearance:none;
     }
-    .select-wrap::after {content:"";position:absolute;right:12px;top:19px;pointer-events:none;
-      width:7px;height:7px;border-right:1.7px solid var(--muted);border-bottom:1.7px solid var(--muted);transform:rotate(45deg);}
+    .select-wrap::after {content:"";position:absolute;right:10px;top:19px;pointer-events:none;
+      width:6px;height:6px;border-right:1.7px solid var(--muted);border-bottom:1.7px solid var(--muted);transform:rotate(45deg);}
+    .ev-output {display:flex;align-items:center;justify-content:center;width:100%;height:46px;background:var(--surface);
+      border:1px solid var(--border);border-radius:10px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;}
+    .info-dialog {position:fixed;inset:0;margin:auto;width:min(92vw,510px);max-height:min(82dvh,780px);
+      padding:0;color:var(--text);background:var(--background);border:1px solid var(--border);
+      border-radius:17px;box-shadow:0 20px 50px rgba(0,0,0,.5);overflow:hidden;}
+    .info-dialog::backdrop {background:rgba(0,0,0,.7);}
+    .dialog-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;
+      padding:15px 17px;border-bottom:1px solid var(--border);}
+    .dialog-heading h2 {font-size:18px;margin:0;font-weight:700;}
+    .dialog-close {border:1px solid var(--border);background:var(--control);border-radius:9px;
+      padding:7px 12px;font-size:14px;color:var(--text);min-height:36px;}
+    .dialog-content {padding:14px 17px 20px;max-height:calc(min(82dvh,780px) - 67px);
+      overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;
+      user-select:text;-webkit-user-select:text;font-size:14px;line-height:1.5;}
+    .dialog-content p {margin:0 0 12px;}
+    .dialog-content h3 {font-size:14px;margin:14px 0 6px;}
+    .dialog-content ol {padding-left:21px;margin:4px 0 14px;}
+    .dialog-content li {margin:0 0 8px;}
+    .dialog-content strong {color:#fff;}
+    .zone-help-row {display:grid;grid-template-columns:42px 1fr;gap:10px;align-items:center;
+      padding:8px 0;border-bottom:1px solid var(--border);}
+    .zone-swatch {display:grid;place-items:center;height:35px;border-radius:5px;font-weight:750;}
+    .zone-help-text {min-width:0;font-size:13px;}
+    html.dialog-open,html.dialog-open body {touch-action:auto;}
+
     .tape-head {display:grid;flex-shrink:0;grid-template-columns:.72fr .94fr 1.57fr;gap:6px;margin:0 0 9px;}
     .tape-head span {color:var(--muted);font-size:11px;letter-spacing:.105em;font-weight:700;text-align:center;}
     .zone-grid {display:grid;flex:1 1 auto;min-height:0;max-height:514px;
@@ -83,15 +112,19 @@
       .topbar {height:30px;margin-bottom:9px;}
       .controls {margin-bottom:12px;}
       .control-label {margin-bottom:4px;}
-      select {height:40px;}
+      select,.ev-output {height:40px;}
       .select-wrap::after {top:16px;}
       .tape-head {margin-bottom:5px;}
       .zone-grid {gap:2px;}
     }
     @media (max-width:360px) {
       .app{padding-inline:10px}
-      .controls{gap:5px}
-      select{padding-left:9px;font-size:14px}
+      .controls{gap:4px}
+      select{padding-left:7px;padding-right:16px;font-size:13px}
+      .select-wrap::after{right:7px}
+      .ev-output{font-size:13px}
+      .header-actions{gap:3px}
+      .header-action{padding:7px 6px;font-size:11px}
       .tape-head,.zone-row{gap:4px}
       .tape-cell{font-size:13px}
     }
@@ -107,7 +140,11 @@
   <main class="app">
     <header class="topbar">
       <h1>Zone meter</h1>
-      <button id="reset" class="reset" type="button">Reset</button>
+      <div class="header-actions">
+        <button class="header-action" type="button" id="help-button" aria-haspopup="dialog">Help</button>
+        <button class="header-action" type="button" id="zones-button" aria-haspopup="dialog">Zones</button>
+        <button class="header-action reset" type="button" id="reset">Reset</button>
+      </div>
     </header>
     <section class="controls" aria-label="Exposure settings">
       <div class="control">
@@ -122,15 +159,43 @@
         <label for="iso-select" class="control-label">ISO</label>
         <div class="select-wrap"><select id="iso-select" aria-label="ISO"></select></div>
       </div>
+      <div class="control">
+        <label for="meter-ev" class="control-label">EV</label>
+        <output id="meter-ev" class="ev-output" aria-label="Calculated metered exposure value">8.9</output>
+      </div>
     </section>
     <div class="tape-head" aria-hidden="true"><span>ZONE</span><span>EV</span><span>EXPOSURE</span></div>
     <section id="zone-grid" class="zone-grid" aria-label="Zone system exposure tapes"></section>
   </main>
+  <dialog class="info-dialog" id="help-dialog" aria-labelledby="help-title">
+    <div class="dialog-heading"><h2 id="help-title">How to use</h2><button type="button" class="dialog-close" data-close-dialog>Close</button></div>
+    <div class="dialog-content">
+      <ol>
+        <li>Spot-meter a subject with your camera. Select the metered <strong>shutter speed</strong>, <strong>aperture</strong> and <strong>ISO</strong> above the tapes.</li>
+        <li>Tap the <strong>zone</strong> where you want that subject to appear. The highlighted row is your metered tone; swipe the EV or Exposure tape to move its placement.</li>
+        <li>Set your camera to the shutter/aperture combination on <strong>Zone V</strong> (bold outline), at your selected ISO. The other rows are equivalent readings for subjects placed in those zones.</li>
+        <li>To check another part of the scene, spot-meter it at the same ISO and aperture. Find that reading on the Exposure tape to see which zone it would occupy.</li>
+      </ol>
+      <h3>Metering a shadow</h3>
+      <p>Meter the darkest shadow needing clear texture. For example, at <strong>1/30 · f/4 · ISO 400</strong>, place it in <strong>Zone III</strong>. Shoot at roughly <strong>1/125 · f/4 · ISO 400</strong> (Zone V row).</p>
+      <h3>Metering a highlight</h3>
+      <p>Meter a bright area you want to retain texture in. For example, at <strong>1/1000 · f/4 · ISO 400</strong>, place it in <strong>Zone VIII</strong> for a very bright highlight with minimal texture. Shoot at roughly <strong>1/125 · f/4 · ISO 400</strong> (Zone V row). For more highlight texture, consider <strong>Zone VII</strong>.</p>
+      <h3>Important</h3>
+      <p>The camera meter treats the measured area as a midtone (Zone V) before placement. These are exposure relationships, not guarantees of highlight detail or shadow texture: film, development and digital sensor response matter.</p>
+    </div>
+  </dialog>
+  <dialog class="info-dialog" id="zones-dialog" aria-labelledby="zones-title">
+    <div class="dialog-heading"><h2 id="zones-title">Zone definitions</h2><button type="button" class="dialog-close" data-close-dialog>Close</button></div>
+    <div class="dialog-content" id="zone-definitions"></div>
+  </dialog>
   <script>
   (() => {
     'use strict';
     // This screen is a fixed instrument: only its controls and exposure tapes move.
-    const stopGesture = e => { if(e.cancelable)e.preventDefault(); };
+    const stopGesture = e => {
+      if(e.type==='touchmove' && e.target.closest('.info-dialog[open] .dialog-content'))return;
+      if(e.cancelable)e.preventDefault();
+    };
     for(const type of ['gesturestart','gesturechange','gestureend']){
       document.addEventListener(type,stopGesture,{passive:false});
     }
@@ -138,15 +203,23 @@
     document.addEventListener('dblclick',stopGesture,{passive:false});
     const names = ['0','I','II','III','IV','V','VI','VII','VIII','IX','X'];
     const colours = ['#141414','#292929','#3e3e3e','#545454','#6c6c6c','#858585','#9f9f9f','#b9b9b9','#d0d0d0','#e7e7e7','#fafafa'];
-    const apertures = [1,1.4,2,2.8,4,5.6,8,11,16,22,32,45];
+    const apertures = [1,1.1,1.2,1.4,1.6,1.8,2,2.2,2.5,2.8,3.2,3.5,4,4.5,5,5.6,6.3,7.1,8,9,10,11,13,14,16,18,20,22,25,29,32,36,40,45];
+    const legacyApertures = [1,1.4,2,2.8,4,5.6,8,11,16,22,32,45];
     const isos = [25,50,100,200,400,800,1600,3200,6400,12800,25600];
     const shutterValues = [30,25,20,15,13,10,8,6,5,4,3.2,2.5,2,1.6,1.3,1,.8,.6,.5,.4,1/3,1/4,1/5,1/6,1/8,1/10,1/13,1/15,1/20,1/25,1/30,1/40,1/50,1/60,1/80,1/100,1/125,1/160,1/200,1/250,1/320,1/400,1/500,1/640,1/800,1/1000,1/1250,1/1600,1/2000,1/2500,1/3200,1/4000,1/5000,1/6400,1/8000,1/10000,1/12800,1/16000];
     const $ = id => document.getElementById(id);
     const clamp = (n,min,max) => Math.min(max,Math.max(min,n));
-    const defaultState = () => ({apIndex:4,isoIndex:4,placedZone:3,sceneEV:Math.log2(16*30)-2});
+    const defaultState = () => ({apIndex:apertures.indexOf(4),isoIndex:4,placedZone:3,sceneEV:Math.log2(16*30)-2});
+    const storageKey='zone-meter-state-v2';
     function loadState(){
       try{
-        const saved=JSON.parse(localStorage.getItem('zone-meter-state-v1'));
+        let saved=JSON.parse(localStorage.getItem(storageKey));
+        if(!saved){
+          saved=JSON.parse(localStorage.getItem('zone-meter-state-v1'));
+          if(saved && Number.isInteger(saved.apIndex) && saved.apIndex>=0 && saved.apIndex<legacyApertures.length){
+            saved.apIndex=apertures.indexOf(legacyApertures[saved.apIndex]);
+          }
+        }
         if(!saved||!Number.isInteger(saved.apIndex)||!Number.isInteger(saved.isoIndex)||!Number.isInteger(saved.placedZone)||!Number.isFinite(saved.sceneEV))return defaultState();
         if(saved.apIndex<0||saved.apIndex>=apertures.length||saved.isoIndex<0||saved.isoIndex>=isos.length||saved.placedZone<0||saved.placedZone>10||saved.sceneEV < -25||saved.sceneEV > 40)return defaultState();
         return saved;
@@ -170,7 +243,7 @@
       }
       return best;
     }
-    function save(){try{localStorage.setItem('zone-meter-state-v1',JSON.stringify(state))}catch{}}
+    function save(){try{localStorage.setItem(storageKey,JSON.stringify(state))}catch{}}
     function meteredEV(){return state.sceneEV+Math.log2(isos[state.isoIndex]/100)}
     function createRows(){
       for(let i=0;i<names.length;i++){
@@ -185,6 +258,7 @@
     }
     function render(){
       const ap=apertures[state.apIndex],iso=isos[state.isoIndex],meterEV=meteredEV();
+      $('meter-ev').textContent=meterEV.toFixed(1);
       apertureSelect.value=String(state.apIndex);
       isoSelect.value=String(state.isoIndex);
       const measuredShutter=ap*ap/Math.pow(2,meterEV);
@@ -243,6 +317,39 @@
       render();
     });
     $('reset').addEventListener('click',()=>{state=defaultState();render()});
+    const zoneDescriptions = [
+      ['0','Pure black','No visible detail or tonal separation.'],
+      ['I','Near black','Barely distinguishable from black; no useful texture.'],
+      ['II','Deep shadow','First suggestion of shadow detail; dark fabric or foliage.'],
+      ['III','Textured shadow','Dark bark or stone with recognisable detail.'],
+      ['IV','Dark midtone','Dark foliage, weathered wood, shaded surfaces.'],
+      ['V','Middle grey','Meter reference; grey card or average midtone.'],
+      ['VI','Light midtone','Light skin, light stone, brighter surfaces.'],
+      ['VII','Textured highlight','Bright fabric, pale objects with visible detail.'],
+      ['VIII','Near-white highlight','Bright snow or clouds, minimal remaining texture.'],
+      ['IX','Almost white','Very little tonal separation; texture largely absent.'],
+      ['X','Pure white','Specular highlight or paper white with no detail.']
+    ];
+    const definitions=$('zone-definitions');
+    zoneDescriptions.forEach(([label,title,example],i)=>{
+      const row=document.createElement('div');row.className='zone-help-row';
+      const swatch=document.createElement('div');swatch.className='zone-swatch';
+      swatch.style.backgroundColor=colours[i];swatch.style.color=i<5?'white':'#111820';
+      swatch.textContent=label;
+      const description=document.createElement('div');description.className='zone-help-text';
+      const strong=document.createElement('strong');strong.textContent=title;
+      const text=document.createElement('div');text.textContent=example;
+      description.append(strong,text);row.append(swatch,description);definitions.append(row);
+    });
+    for(const [buttonId,dialogId] of [['help-button','help-dialog'],['zones-button','zones-dialog']]){
+      const button=$(buttonId),dialog=$(dialogId);
+      button.addEventListener('click',()=>{dialog.showModal();document.documentElement.classList.add('dialog-open');});
+      dialog.querySelector('[data-close-dialog]').addEventListener('click',()=>dialog.close());
+      dialog.addEventListener('close',()=>document.documentElement.classList.remove('dialog-open'));
+      dialog.addEventListener('click',e=>{
+        if(e.target===dialog)dialog.close();
+      });
+    }
     let drag=null;
     grid.addEventListener('pointerdown',e=>{
       if(e.pointerType==='mouse'&&e.button!==0)return;
